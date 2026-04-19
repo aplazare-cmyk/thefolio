@@ -1,0 +1,1 @@
+"# fullstack-backend1"  initgit add README.mdgit commit -m "first commit"git branch -M maingit remote add origin https://github.com/aplazare-cmyk/fullstack-backend1.gitgit push -u origin main
