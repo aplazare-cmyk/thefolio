@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { getImageUrl } from '../utils/imageHelper';
 
 const PenIcon     = () => <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>;
 const ImageIcon   = () => <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
@@ -16,8 +17,9 @@ const ListIcon    = () => <svg width="15" height="15" fill="none" stroke="curren
 
 function Avatar({ user: u, size = 40 }) {
     if (!u) return null;
-    return u.profilePic
-        ? <img src={`http://localhost:5000/uploads/${u.profilePic}`} alt={u.name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', flexShrink: 0 }} />
+    const picSrc = getImageUrl(u.profilePic);
+    return picSrc
+        ? <img src={picSrc} alt={u.name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', flexShrink: 0 }} />
         : <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 700, color: '#fff', flexShrink: 0, border: '2px solid var(--border)' }}>
             {u.name?.charAt(0).toUpperCase()}
           </div>;
@@ -117,12 +119,13 @@ function Composer({ user: u, onPost }) {
 }
 
 function FeedCard({ post, onClick }) {
+    const imgSrc = getImageUrl(post.image);
     return (
         <article style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', overflow: 'hidden', transition: 'all 0.25s', cursor: 'pointer' }}
             onClick={onClick}
             onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--sh-lg)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
             onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: post.image ? '1px solid var(--border-2)' : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: imgSrc ? '1px solid var(--border-2)' : 'none' }}>
                 <Avatar user={post.author} size={38} />
                 <div style={{ flex: 1 }}>
                     <p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{post.author?.name}</p>
@@ -137,9 +140,9 @@ function FeedCard({ post, onClick }) {
                     </span>
                 )}
             </div>
-            {post.image && (
+            {imgSrc && (
                 <div style={{ width: '100%', maxHeight: 320, overflow: 'hidden', background: 'var(--surface-3)' }}>
-                    <img src={`http://localhost:5000/uploads/${post.image}`} alt={post.title} style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block' }} />
+                    <img src={imgSrc} alt={post.title} style={{ width: '100%', maxHeight: 320, objectFit: 'cover', display: 'block' }} />
                 </div>
             )}
             <div style={{ padding: '16px 20px' }}>
@@ -155,12 +158,13 @@ function FeedCard({ post, onClick }) {
 }
 
 function GridCard({ post, onClick }) {
+    const imgSrc = getImageUrl(post.image);
     return (
         <div onClick={onClick} style={{ borderRadius: 'var(--r-lg)', overflow: 'hidden', cursor: 'pointer', position: 'relative', background: 'var(--surface-3)', aspectRatio: '1', border: '1px solid var(--border)' }}
             onMouseEnter={e => e.currentTarget.querySelector('.grid-overlay').style.opacity = '1'}
             onMouseLeave={e => e.currentTarget.querySelector('.grid-overlay').style.opacity = '0'}>
-            {post.image
-                ? <img src={`http://localhost:5000/uploads/${post.image}`} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            {imgSrc
+                ? <img src={imgSrc} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                 : <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'linear-gradient(135deg, var(--bg-2), var(--surface-2))' }}>
                     <span style={{ fontSize: '1.5rem', marginBottom: 8 }}>✍️</span>
                     <p style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text-2)', textAlign: 'center', lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -196,20 +200,17 @@ export default function HomePage() {
     const handleNewPost = newPost => setPosts(prev => [newPost, ...prev]);
     const filtered = filter === 'all' ? posts : posts.filter(p => p.category === filter);
 
+    const userPicSrc = getImageUrl(user?.profilePic);
+
     return (
         <div style={{ background: 'var(--bg)', minHeight: '100%' }}>
-
-            {/* Guest hero */}
             {!user && (
                 <section style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)', padding: '64px 5%' }}>
                     <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
                         <span className="eyebrow" style={{ display: 'block', textAlign: 'center' }}>Welcome to</span>
                         <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(2.8rem,6vw,5rem)', marginBottom: 20, letterSpacing: '-0.02em' }}>Writeza</h1>
                         <p style={{ color: 'var(--text-2)', fontSize: '1rem', maxWidth: 640, margin: '0 auto 20px', lineHeight: 1.9 }}>
-                            Writeza is a creative space where writers bring their ideas to life and share their voices with the world. Designed as a modern portfolio platform, Writeza allows writers of all levels to publish their stories, poems, essays, and creative pieces in one personalized digital home.
-                        </p>
-                        <p style={{ color: 'var(--text-3)', fontSize: '0.95rem', maxWidth: 620, margin: '0 auto 36px', lineHeight: 1.9 }}>
-                            More than just a publishing site, Writeza is a growing community where creativity meets opportunity — a place to showcase talent, build a writing identity, and connect with readers who value authentic storytelling.
+                            Writeza is a creative space where writers bring their ideas to life and share their voices with the world.
                         </p>
                         <div style={{ display: 'flex', gap: 0, justifyContent: 'center', marginBottom: 40, padding: '24px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
                             {[{ value: posts.length || '∞', label: 'Stories Published' }, { value: 'Free', label: 'Always & Forever' }, { value: '✍️', label: 'Write Anything' }].map((s, i) => (
@@ -227,12 +228,11 @@ export default function HomePage() {
                 </section>
             )}
 
-            {/* Logged-in welcome bar */}
             {user && (
                 <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '14px 5%' }}>
                     <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 14 }}>
-                        {user.profilePic
-                            ? <img src={`http://localhost:5000/uploads/${user.profilePic}`} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', flexShrink: 0 }} />
+                        {userPicSrc
+                            ? <img src={userPicSrc} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', flexShrink: 0 }} />
                             : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{user.name?.charAt(0).toUpperCase()}</div>
                         }
                         <div>
@@ -246,11 +246,9 @@ export default function HomePage() {
                 </div>
             )}
 
-            {/* Feed */}
             <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 5%' }}>
                 {user && <Composer user={user} onPost={handleNewPost} />}
 
-                {/* Filter + view toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {CATEGORIES.map(cat => (
@@ -275,8 +273,8 @@ export default function HomePage() {
                 {!loading && filtered.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '64px 24px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)' }}>
                         <div style={{ fontSize: 48, marginBottom: 16 }}>✍️</div>
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.6rem', marginBottom: 8, color: 'var(--text)' }}>{filter !== 'all' ? `No ${filter} posts yet` : 'No posts yet'}</h3>
-                        <p style={{ color: 'var(--text-3)', marginBottom: 24, fontSize: '0.92rem' }}>{user ? 'Be the first to share something on Writeza!' : 'Join Writeza and be the first to post!'}</p>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.6rem', marginBottom: 8 }}>{filter !== 'all' ? `No ${filter} posts yet` : 'No posts yet'}</h3>
+                        <p style={{ color: 'var(--text-3)', marginBottom: 24, fontSize: '0.92rem' }}>{user ? 'Be the first to share something!' : 'Join Writeza and be the first to post!'}</p>
                         {user ? <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="btn btn-primary"><PenIcon /> Write Something</button>
                                : <Link to="/register" className="btn btn-primary"><UserIcon /> Join Writeza</Link>}
                     </div>
@@ -296,9 +294,8 @@ export default function HomePage() {
 
                 {!user && !loading && posts.length > 0 && (
                     <div style={{ marginTop: 32, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '36px', textAlign: 'center' }}>
-                        <span className="eyebrow" style={{ display: 'block', textAlign: 'center' }}>Join Writeza</span>
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.6rem', marginBottom: 8, color: 'var(--text)' }}>Ready to share your writing?</h3>
-                        <p style={{ color: 'var(--text-3)', marginBottom: 24, fontSize: '0.92rem' }}>Register for free to publish your work, build your portfolio, and connect with a community of writers.</p>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.6rem', marginBottom: 8 }}>Ready to share your writing?</h3>
+                        <p style={{ color: 'var(--text-3)', marginBottom: 24, fontSize: '0.92rem' }}>Register for free to publish your work and connect with writers.</p>
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                             <Link to="/register" className="btn btn-primary"><UserIcon /> Join Writeza Free</Link>
                             <Link to="/login" className="btn btn-outline">Log In</Link>

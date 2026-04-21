@@ -1,15 +1,17 @@
+// frontend/src/api/axios.js
 import axios from 'axios';
 
-const instance = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'https://thefolio-api-u0s1.onrender.com/api',
+// Use REACT_APP_API_URL in production (set in Vercel env vars)
+// Falls back to localhost for local development
+const API = axios.create({
+    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
 });
 
-instance.interceptors.request.use((config) => {
+// Attach JWT token to every request if available
+API.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
 
-export default instance;
+export default API;

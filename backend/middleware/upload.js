@@ -1,29 +1,28 @@
 // backend/middleware/upload.js
-const multer  = require('multer');
-const path    = require('path');
+const cloudinary              = require('cloudinary').v2;
+const { CloudinaryStorage }   = require('multer-storage-cloudinary');
+const multer                  = require('multer');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        cb(null, unique + path.extname(file.originalname));
+// ── Configure Cloudinary ────────────────────────────────────
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// ── Cloudinary storage engine ───────────────────────────────
+const storage = new CloudinaryStorage({
+    cloudinary,
+    params: {
+        folder:         'writeza',          // folder name in your Cloudinary account
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        transformation: [{ width: 1200, crop: 'limit' }],  // auto-resize large images
     },
 });
 
-const fileFilter = (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/;
-    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mime = allowed.test(file.mimetype);
-    if (ext && mime) cb(null, true);
-    else cb(new Error('Only image files are allowed'));
-};
-
 const upload = multer({
     storage,
-    fileFilter,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+    limits: { fileSize: 5 * 1024 * 1024 },  // 5MB max
 });
 
 module.exports = upload;

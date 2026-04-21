@@ -3,21 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
+import { getImageUrl } from '../utils/imageHelper';
 
-// ── Reading list helpers ────────────────────────────────────
 const RL_KEY          = 'writeza_reading_list';
 const getReadingList  = () => { try { return JSON.parse(localStorage.getItem(RL_KEY)) || []; } catch { return []; } };
 const saveReadingList = list => localStorage.setItem(RL_KEY, JSON.stringify(list));
 
-// ── Category colours ────────────────────────────────────────
 const CAT_COLORS = {
-    Poetry:   { bg: 'rgba(123,94,58,0.1)',   color: '#7B5E3A' },
-    Essay:    { bg: 'rgba(45,106,79,0.1)',    color: '#2D6A4F' },
-    Fiction:  { bg: 'rgba(88,75,158,0.1)',    color: '#584B9E' },
-    Personal: { bg: 'rgba(196,150,60,0.1)',   color: '#C4963C' },
-    Craft:    { bg: 'rgba(179,58,58,0.1)',    color: '#B33A3A' },
-    Featured: { bg: 'rgba(196,150,60,0.15)',  color: '#C4963C' },
-    Other:    { bg: 'rgba(100,100,100,0.1)',  color: '#666'    },
+    Poetry:   { bg: 'rgba(123,94,58,0.1)',  color: '#7B5E3A' },
+    Essay:    { bg: 'rgba(45,106,79,0.1)',   color: '#2D6A4F' },
+    Fiction:  { bg: 'rgba(88,75,158,0.1)',   color: '#584B9E' },
+    Personal: { bg: 'rgba(196,150,60,0.1)',  color: '#C4963C' },
+    Craft:    { bg: 'rgba(179,58,58,0.1)',   color: '#B33A3A' },
+    Featured: { bg: 'rgba(196,150,60,0.15)', color: '#C4963C' },
+    Other:    { bg: 'rgba(100,100,100,0.1)', color: '#666'    },
 };
 const CATEGORY_ICONS = { Poetry:'🌸', Essay:'✍️', Fiction:'📖', Personal:'💭', Craft:'🎨', Featured:'⭐', Other:'📝' };
 
@@ -26,25 +25,23 @@ export default function PostPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const [post, setPost]                     = useState(null);
-    const [comments, setComments]             = useState([]);
-    const [loading, setLoading]               = useState(true);
-    const [commentText, setCommentText]       = useState('');
-    const [submitting, setSubmitting]         = useState(false);
-    const [deleteConfirm, setDeleteConfirm]   = useState(false);
+    const [post, setPost]                       = useState(null);
+    const [comments, setComments]               = useState([]);
+    const [loading, setLoading]                 = useState(true);
+    const [commentText, setCommentText]         = useState('');
+    const [submitting, setSubmitting]           = useState(false);
+    const [deleteConfirm, setDeleteConfirm]     = useState(false);
     const [commentDeleteId, setCommentDeleteId] = useState(null);
-    const [error, setError]                   = useState('');
-
-    // Wattpad features
-    const [liked, setLiked]               = useState(false);
-    const [likeCount, setLikeCount]       = useState(0);
-    const [likeLoading, setLikeLoading]   = useState(false);
-    const [inReadingList, setInReadingList] = useState(false);
-    const [readerMode, setReaderMode]     = useState(false);
-    const [fontSize, setFontSize]         = useState(18);
-    const [readTime, setReadTime]         = useState(0);
-    const [showShareToast, setShowShareToast] = useState(false);
-    const [relatedPosts, setRelatedPosts] = useState([]);
+    const [error, setError]                     = useState('');
+    const [liked, setLiked]                     = useState(false);
+    const [likeCount, setLikeCount]             = useState(0);
+    const [likeLoading, setLikeLoading]         = useState(false);
+    const [inReadingList, setInReadingList]     = useState(false);
+    const [readerMode, setReaderMode]           = useState(false);
+    const [fontSize, setFontSize]               = useState(18);
+    const [readTime, setReadTime]               = useState(0);
+    const [showShareToast, setShowShareToast]   = useState(false);
+    const [relatedPosts, setRelatedPosts]       = useState([]);
 
     useEffect(() => {
         Promise.all([API.get(`/posts/${id}`), API.get(`/comments/${id}`)])
@@ -64,9 +61,7 @@ export default function PostPage() {
             }).catch(() => setError('Post not found.'))
               .finally(() => setLoading(false));
 
-        const rl = getReadingList();
-        setInReadingList(rl.some(x => x.id === id));
-
+        setInReadingList(getReadingList().some(x => x.id === id));
         if (user) {
             API.get(`/likes/${id}`).then(r => { setLiked(r.data.liked); setLikeCount(r.data.likes); }).catch(() => {});
         }
@@ -75,27 +70,19 @@ export default function PostPage() {
     const handleLike = async () => {
         if (!user) { navigate('/login'); return; }
         setLikeLoading(true);
-        try {
-            const { data } = await API.post(`/likes/${id}`);
-            setLiked(data.liked); setLikeCount(data.likes);
-        } catch {}
-        finally { setLikeLoading(false); }
+        try { const { data } = await API.post(`/likes/${id}`); setLiked(data.liked); setLikeCount(data.likes); }
+        catch {} finally { setLikeLoading(false); }
     };
 
     const toggleReadingList = () => {
         const rl = getReadingList();
-        if (inReadingList) {
-            saveReadingList(rl.filter(x => x.id !== id));
-            setInReadingList(false);
-        } else {
-            saveReadingList([...rl, { id, title: post?.title, author: post?.author?.name, category: post?.category, image: post?.image }]);
-            setInReadingList(true);
-        }
+        if (inReadingList) { saveReadingList(rl.filter(x => x.id !== id)); setInReadingList(false); }
+        else { saveReadingList([...rl, { id, title: post?.title, author: post?.author?.name, category: post?.category, image: post?.image }]); setInReadingList(true); }
     };
 
     const handleShare = () => {
-        if (navigator.share) { navigator.share({ title: post?.title, url: window.location.href }).catch(() => {}); }
-        else { navigator.clipboard.writeText(window.location.href).then(() => { setShowShareToast(true); setTimeout(() => setShowShareToast(false), 2500); }); }
+        if (navigator.share) navigator.share({ title: post?.title, url: window.location.href }).catch(() => {});
+        else navigator.clipboard.writeText(window.location.href).then(() => { setShowShareToast(true); setTimeout(() => setShowShareToast(false), 2500); });
     };
 
     const handleDeletePost = async () => {
@@ -107,10 +94,8 @@ export default function PostPage() {
         e.preventDefault();
         if (!commentText.trim()) return;
         setSubmitting(true);
-        try {
-            const { data } = await API.post(`/comments/${id}`, { body: commentText });
-            setComments(p => [...p, data]); setCommentText('');
-        } catch { setError('Could not post comment.'); }
+        try { const { data } = await API.post(`/comments/${id}`, { body: commentText }); setComments(p => [...p, data]); setCommentText(''); }
+        catch { setError('Could not post comment.'); }
         finally { setSubmitting(false); }
     };
 
@@ -122,12 +107,13 @@ export default function PostPage() {
     if (loading) return <main style={{ maxWidth: 760, margin: '0 auto', padding: '80px 5%', textAlign: 'center' }}><p style={{ color: 'var(--text-3)' }}>Loading…</p></main>;
     if (error && !post) return <main style={{ maxWidth: 760, margin: '0 auto', padding: '80px 5%', textAlign: 'center' }}><p style={{ color: 'var(--red)' }}>{error}</p><Link to="/home" style={{ color: 'var(--accent)' }}>← Back</Link></main>;
 
-    const isOwner = user && post?.author?._id === user._id;
-    const isAdmin = user?.role === 'admin';
-    const canEdit = isOwner || isAdmin;
+    const isOwner  = user && post?.author?._id === user._id;
+    const isAdmin  = user?.role === 'admin';
+    const canEdit  = isOwner || isAdmin;
     const catStyle = CAT_COLORS[post.category] || CAT_COLORS.Other;
+    const coverSrc = getImageUrl(post.image);
+    const authorPicSrc = getImageUrl(post.author?.profilePic);
 
-    // ── READER MODE ─────────────────────────────────────────
     if (readerMode) return (
         <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
             <div style={{ position: 'sticky', top: 68, zIndex: 100, background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 5%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -146,8 +132,8 @@ export default function PostPage() {
             <div style={{ maxWidth: 680, margin: '0 auto', padding: '48px 5%' }}>
                 <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(1.8rem,4vw,2.8rem)', marginBottom: 20 }}>{post.title}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 40, paddingBottom: 24, borderBottom: '1px solid var(--border)' }}>
-                    {post.author?.profilePic
-                        ? <img src={`http://localhost:5000/uploads/${post.author.profilePic}`} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                    {authorPicSrc
+                        ? <img src={authorPicSrc} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
                         : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 13 }}>{post.author?.name?.charAt(0).toUpperCase()}</div>
                     }
                     <span style={{ fontSize: '0.88rem', color: 'var(--text-2)', fontWeight: 500 }}>{post.author?.name}</span>
@@ -168,45 +154,36 @@ export default function PostPage() {
         </div>
     );
 
-    // ── NORMAL VIEW ─────────────────────────────────────────
     return (
         <main style={{ maxWidth: 800, margin: '0 auto', padding: '56px 5%' }}>
-
             {showShareToast && (
                 <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: 'var(--text)', color: 'var(--bg)', padding: '10px 20px', borderRadius: 'var(--r-full)', fontSize: '0.82rem', fontWeight: 600, zIndex: 9999, boxShadow: 'var(--sh-lg)', fontFamily: 'var(--font-sans)' }}>
                     🔗 Link copied to clipboard!
                 </div>
             )}
 
-            {/* Back */}
             <button onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-3)', fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 500, marginBottom: 32, padding: 0 }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 Back
             </button>
 
-            {/* Meta badges */}
             {post.category && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '5px 14px', borderRadius: 'var(--r-full)', background: catStyle.bg, color: catStyle.color }}>
                         {CATEGORY_ICONS[post.category]} {post.category}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-4)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        {readTime} min read
-                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-4)' }}>⏱ {readTime} min read</span>
                     {post.readCount > 0 && <span style={{ fontSize: '0.72rem', color: 'var(--text-4)' }}>👁️ {post.readCount.toLocaleString()} reads</span>}
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-4)' }}>❤️ {likeCount} votes</span>
                 </div>
             )}
 
-            {/* Title */}
             <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontWeight: 700, fontSize: 'clamp(2rem,5vw,3rem)', lineHeight: 1.15, marginBottom: 24, letterSpacing: '-0.02em' }}>{post.title}</h1>
 
-            {/* Author row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, paddingBottom: 24, borderBottom: '1px solid var(--border)', marginBottom: 32 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }} onClick={() => navigate(`/user/${post.author?._id}`)}>
-                    {post.author?.profilePic
-                        ? <img src={`http://localhost:5000/uploads/${post.author.profilePic}`} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
+                    {authorPicSrc
+                        ? <img src={authorPicSrc} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
                         : <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#fff' }}>{post.author?.name?.charAt(0).toUpperCase()}</div>
                     }
                     <div>
@@ -217,67 +194,52 @@ export default function PostPage() {
                 {canEdit && (
                     <div style={{ display: 'flex', gap: 8 }}>
                         <Link to={`/edit-post/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', fontSize: '0.74rem', fontWeight: 500, color: 'var(--text-2)', textDecoration: 'none' }}>Edit</Link>
-                        {!deleteConfirm ? (
-                            <button onClick={() => setDeleteConfirm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'transparent', border: '1px solid rgba(179,58,58,0.3)', borderRadius: 'var(--r-sm)', fontSize: '0.74rem', fontWeight: 500, color: 'var(--red)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>Delete</button>
-                        ) : (
-                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '6px 12px', background: 'rgba(179,58,58,0.07)', border: '1px solid rgba(179,58,58,0.2)', borderRadius: 'var(--r-sm)' }}>
+                        {!deleteConfirm
+                            ? <button onClick={() => setDeleteConfirm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'transparent', border: '1px solid rgba(179,58,58,0.3)', borderRadius: 'var(--r-sm)', fontSize: '0.74rem', fontWeight: 500, color: 'var(--red)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>Delete</button>
+                            : <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '6px 12px', background: 'rgba(179,58,58,0.07)', border: '1px solid rgba(179,58,58,0.2)', borderRadius: 'var(--r-sm)' }}>
                                 <span style={{ fontSize: '0.74rem', color: 'var(--red)' }}>Confirm?</span>
                                 <button onClick={handleDeletePost} style={{ padding: '3px 8px', background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 'var(--r-xs)', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>Yes</button>
                                 <button onClick={() => setDeleteConfirm(false)} style={{ padding: '3px 8px', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>No</button>
-                            </div>
-                        )}
+                              </div>
+                        }
                     </div>
                 )}
             </div>
 
-            {/* Cover image */}
-            {post.image && (
+            {coverSrc && (
                 <div style={{ borderRadius: 'var(--r-xl)', overflow: 'hidden', marginBottom: 40, boxShadow: 'var(--sh-lg)' }}>
-                    <img src={`http://localhost:5000/uploads/${post.image}`} alt={post.title} style={{ width: '100%', maxHeight: 460, objectFit: 'cover', display: 'block' }} />
+                    <img src={coverSrc} alt={post.title} style={{ width: '100%', maxHeight: 460, objectFit: 'cover', display: 'block' }} />
                 </div>
             )}
 
-            {/* ── WATTPAD TOOLBAR ── */}
+            {/* Wattpad toolbar */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 32, flexWrap: 'wrap', padding: '14px 18px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
-                <button onClick={handleLike} disabled={likeLoading}
-                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', background: liked ? 'rgba(224,80,80,0.1)' : 'var(--surface)', border: `1px solid ${liked ? 'rgba(224,80,80,0.35)' : 'var(--border)'}`, borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: liked ? '#e05050' : 'var(--text-3)', fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>
+                <button onClick={handleLike} disabled={likeLoading} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', background: liked ? 'rgba(224,80,80,0.1)' : 'var(--surface)', border: `1px solid ${liked ? 'rgba(224,80,80,0.35)' : 'var(--border)'}`, borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: liked ? '#e05050' : 'var(--text-3)', fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>
                     {liked ? '❤️' : '🤍'} {likeCount} {likeCount === 1 ? 'Vote' : 'Votes'}
                 </button>
-                <button onClick={toggleReadingList}
-                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', background: inReadingList ? 'rgba(45,106,79,0.1)' : 'var(--surface)', border: `1px solid ${inReadingList ? 'rgba(45,106,79,0.35)' : 'var(--border)'}`, borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: inReadingList ? 'var(--green)' : 'var(--text-3)', fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>
+                <button onClick={toggleReadingList} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', background: inReadingList ? 'rgba(45,106,79,0.1)' : 'var(--surface)', border: `1px solid ${inReadingList ? 'rgba(45,106,79,0.35)' : 'var(--border)'}`, borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: inReadingList ? 'var(--green)' : 'var(--text-3)', fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>
                     {inReadingList ? '🔖' : '📌'} {inReadingList ? 'Saved' : 'Reading List'}
                 </button>
-                <button onClick={() => setReaderMode(true)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-sans)' }}>
+                <button onClick={() => setReaderMode(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-sans)' }}>
                     📖 Reader Mode
                 </button>
-                <button onClick={handleShare}
-                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-sans)' }}>
+                <button onClick={handleShare} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-3)', fontFamily: 'var(--font-sans)' }}>
                     🔗 Share
                 </button>
-                {post.readCount > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text-4)' }}>
-                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        {post.readCount.toLocaleString()} reads
-                    </div>
-                )}
+                {post.readCount > 0 && <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text-4)' }}>👁️ {post.readCount.toLocaleString()} reads</div>}
             </div>
 
-            {/* Body */}
             <div style={{ fontSize: '1.08rem', lineHeight: 2.0, color: 'var(--text-2)', fontFamily: 'var(--font-serif)', fontWeight: 400 }}>
                 {post.body?.split('\n').map((line, i) => line.trim() ? <p key={i} style={{ marginBottom: 20 }}>{line}</p> : <br key={i} />)}
             </div>
 
-            {/* End-of-story CTA */}
             <div style={{ margin: '48px 0', padding: '28px', background: 'var(--surface-2)', borderRadius: 'var(--r-xl)', border: '1px solid var(--border)', textAlign: 'center' }}>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-3)', marginBottom: 18 }}>{liked ? '✨ Thanks for voting on this story!' : '💫 Did you enjoy this story? Show your support!'}</p>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={handleLike} disabled={likeLoading}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', background: liked ? '#e05050' : 'var(--text)', color: '#fff', border: 'none', borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>
+                    <button onClick={handleLike} disabled={likeLoading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', background: liked ? '#e05050' : 'var(--text)', color: '#fff', border: 'none', borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, fontFamily: 'var(--font-sans)', transition: 'all 0.2s' }}>
                         {liked ? '❤️ Voted!' : '🤍 Vote for this story'}
                     </button>
-                    <button onClick={toggleReadingList}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, fontFamily: 'var(--font-sans)' }}>
+                    <button onClick={toggleReadingList} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-full)', cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600, fontFamily: 'var(--font-sans)' }}>
                         {inReadingList ? '🔖 Saved to Reading List' : '📌 Add to Reading List'}
                     </button>
                 </div>
@@ -324,10 +286,11 @@ export default function PostPage() {
                     : <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         {comments.map(c => {
                             const canDelete = (user && c.author?._id === user._id) || isAdmin;
+                            const commentPicSrc = getImageUrl(c.author?.profilePic);
                             return (
                                 <div key={c._id} style={{ display: 'flex', gap: 12 }}>
-                                    {c.author?.profilePic
-                                        ? <img src={`http://localhost:5000/uploads/${c.author.profilePic}`} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, marginTop: 2 }} />
+                                    {commentPicSrc
+                                        ? <img src={commentPicSrc} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, marginTop: 2 }} />
                                         : <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--text-2)', flexShrink: 0, marginTop: 2, border: '1px solid var(--border)' }}>{c.author?.name?.charAt(0).toUpperCase()}</div>
                                     }
                                     <div style={{ flex: 1 }}>
@@ -338,7 +301,7 @@ export default function PostPage() {
                                             </div>
                                             {canDelete && (
                                                 commentDeleteId !== c._id
-                                                    ? <button onClick={() => setCommentDeleteId(c._id)} style={{ background: 'none', border: 'none', color: 'var(--text-4)', cursor: 'pointer', fontSize: '0.72rem', fontFamily: 'var(--font-sans)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--red)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-4)'}>Delete</button>
+                                                    ? <button onClick={() => setCommentDeleteId(c._id)} style={{ background: 'none', border: 'none', color: 'var(--text-4)', cursor: 'pointer', fontSize: '0.72rem', fontFamily: 'var(--font-sans)' }}>Delete</button>
                                                     : <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                                                         <span style={{ fontSize: '0.72rem', color: 'var(--red)' }}>Delete?</span>
                                                         <button onClick={() => handleDeleteComment(c._id)} style={{ padding: '2px 8px', background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 'var(--r-xs)', fontSize: '0.7rem', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>Yes</button>
@@ -363,23 +326,26 @@ export default function PostPage() {
                         <span style={{ fontSize: '0.78rem', color: 'var(--text-4)' }}>— {post.category}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {relatedPosts.map(rp => (
-                            <div key={rp._id} onClick={() => navigate(`/posts/${rp._id}`)}
-                                style={{ display: 'flex', gap: 16, padding: '16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', cursor: 'pointer', transition: 'all 0.2s' }}
-                                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateX(0)'; }}>
-                                {rp.image
-                                    ? <img src={`http://localhost:5000/uploads/${rp.image}`} alt={rp.title} style={{ width: 64, height: 64, borderRadius: 'var(--r-md)', objectFit: 'cover', flexShrink: 0 }} />
-                                    : <div style={{ width: 64, height: 64, borderRadius: 'var(--r-md)', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{CATEGORY_ICONS[rp.category] || '✍️'}</div>
-                                }
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h4 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rp.title}</h4>
-                                    <p style={{ fontSize: '0.78rem', color: 'var(--text-4)', margin: '0 0 4px' }}>by {rp.author?.name}</p>
-                                    <p style={{ fontSize: '0.82rem', color: 'var(--text-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rp.body}</p>
+                        {relatedPosts.map(rp => {
+                            const rpImg = getImageUrl(rp.image);
+                            return (
+                                <div key={rp._id} onClick={() => navigate(`/posts/${rp._id}`)}
+                                    style={{ display: 'flex', gap: 16, padding: '16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateX(0)'; }}>
+                                    {rpImg
+                                        ? <img src={rpImg} alt={rp.title} style={{ width: 64, height: 64, borderRadius: 'var(--r-md)', objectFit: 'cover', flexShrink: 0 }} />
+                                        : <div style={{ width: 64, height: 64, borderRadius: 'var(--r-md)', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{CATEGORY_ICONS[rp.category] || '✍️'}</div>
+                                    }
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <h4 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rp.title}</h4>
+                                        <p style={{ fontSize: '0.78rem', color: 'var(--text-4)', margin: '0 0 4px' }}>by {rp.author?.name}</p>
+                                        <p style={{ fontSize: '0.82rem', color: 'var(--text-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rp.body}</p>
+                                    </div>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ color: 'var(--text-4)', flexShrink: 0, alignSelf: 'center' }}><path strokeLinecap="round" d="M9 18l6-6-6-6"/></svg>
                                 </div>
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ color: 'var(--text-4)', flexShrink: 0, alignSelf: 'center' }}><path strokeLinecap="round" d="M9 18l6-6-6-6"/></svg>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
             )}

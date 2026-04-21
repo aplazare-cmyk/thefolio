@@ -51,12 +51,13 @@ router.get('/me', protect, async (req, res) => {
 });
 
 // ── PUT /api/auth/profile ───────────────────────────────────
+// Cloudinary: req.file.path is the full image URL
 router.put('/profile', protect, upload.single('profilePic'), async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
         if (req.body.name) user.name = req.body.name;
         if (req.body.bio !== undefined) user.bio = req.body.bio;
-        if (req.file) user.profilePic = req.file.filename;
+        if (req.file) user.profilePic = req.file.path;   // ← full Cloudinary URL
         await user.save();
         const updated = await User.findById(user._id).select('-password');
         res.json(updated);
@@ -93,30 +94,21 @@ router.post('/deactivate', protect, async (req, res) => {
 });
 
 // ── POST /api/auth/forgot-password ─────────────────────────
-// Generates a 6-digit code and returns it to frontend (EmailJS sends the email)
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
         const user = await User.findOne({ email });
         if (!user) return res.json({ sent: false, message: 'No account found with that email.' });
-
         await PasswordReset.deleteMany({ userId: user._id });
-
         const code      = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
         await PasswordReset.create({ userId: user._id, code, expiresAt });
-
-        // Always log to terminal for development
         console.log(`\n==============================`);
         console.log(`🔑 RESET CODE for ${email}: ${code}`);
         console.log(`⏱  Expires: ${expiresAt.toLocaleTimeString()}`);
         console.log(`==============================\n`);
-
         res.json({ sent: true, code, userName: user.name });
-    } catch (err) {
-        res.status(500).json({ message: 'Something went wrong. Please try again.' });
-    }
+    } catch (err) { res.status(500).json({ message: 'Something went wrong. Please try again.' }); }
 });
 
 // ── POST /api/auth/verify-code ──────────────────────────────
@@ -152,7 +144,6 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // ── GET /api/auth/user/:id ──────────────────────────────────
-// Public profile lookup
 router.get('/user/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
