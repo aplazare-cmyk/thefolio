@@ -5,9 +5,9 @@ import API from '../api/axios';
 
 // ── EmailJS config ──────────────────────────────────────────
 // Sign up FREE at https://www.emailjs.com and replace these:
-const EMAILJS_SERVICE_ID  = 'service_dgrfp4o';
-const EMAILJS_TEMPLATE_ID = 'y0o42ar';
-const EMAILJS_PUBLIC_KEY  = 'sOvcSXp5-m__bCcZH';
+const EMAILJS_SERVICE_ID  = process.env.REACT_APP_EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY  = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
 
 async function sendCodeEmail({ toEmail, toName, code }) {
     const payload = {
